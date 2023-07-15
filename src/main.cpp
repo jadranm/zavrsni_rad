@@ -1,62 +1,61 @@
-#include <Arduino.h>
-#include <SoftwareSerial.h>
-#include "s8_uart.h"
+#include<Arduino.h>
 
-#define LED_INTEGRIRANI 2
-#define DEBUG_BAUDRATE 115200
+//pinovi za S8
+#define RXD2 13
+#define TXD2 12
 
-#define S8_RX_PIN 16
-#define S8_TX_PIN 17
+byte CO2req[] = {0xFE, 0X44, 0X00, 0X08, 0X02, 0X9F, 0X25};
+byte CO2out[] = {0, 0, 0, 0, 0, 0, 0};
 
+void RequestCO2(){
 
-SoftwareSerial S8_serial(S8_RX_PIN, S8_TX_PIN);
+  while (!Serial1.available()){
 
+    Serial1.write(CO2req, 7);
+    delay(50);
+  }
 
-S8_UART *sensor_S8;
-S8_sensor sensor;
+  int timeout = 0;
+  while (Serial1.available() < 7 ){
 
-void setup()
-{
+    timeout++;
+    if (timeout > 10){
 
-	pinMode(LED_INTEGRIRANI, OUTPUT);
+      while (Serial1.available())
+        Serial1.read();
+      break;
+    }
+    delay(50);
+  }
 
-	// startup sekvenca
-	delay(1000);
+  for (int i = 0; i < 7; i++){
 
-	for (uint8_t i = 0; i < 3; i++)
-	{
-		digitalWrite(LED_INTEGRIRANI, HIGH);
-		delay(500);
-		digitalWrite(LED_INTEGRIRANI, LOW);
-		delay(500);
-	}
+    CO2out[i] = Serial1.read();
+  }
+}
 
+unsigned long CO2count(){
 
-	Serial.begin(DEBUG_BAUDRATE);
-
-	// Wait port is open or timeout
-	int i = 0;
-	while (!Serial && i < 50){
-		delay(10);
-		i++;
-	}
-
-	
-	Serial.println("serial radi");
-
-	// Initialize S8 sensor
-	S8_serial.begin(S8_BAUDRATE);
-	sensor_S8 = new S8_UART(S8_serial);
+  int high = CO2out[3];
+  int low = CO2out[4];
+  unsigned long val = high * 256 + low;
+  return val * 1; // S8 = 1. K-30 3% = 3, K-33 ICB = 10
 }
 
 
+void setup(){
+  
+  Serial.begin(115200);
+  
+  Serial1.begin(9600, SERIAL_8N1, RXD2, TXD2);
+}
 
-void loop(){
+void loop() {
 
-  	sensor.co2 = sensor_S8->get_co2();
-  	printf("CO2 value = %d ppm\n", sensor.co2);
-	Serial.printf("/*%u*/\n", sensor.co2);
+  RequestCO2();
+  unsigned long CO2 = CO2count();
+  delay(2000);
+  String CO2s = "CO2: " + String(CO2);
 
-	delay(500);
-
+  Serial.println(CO2s);
 }
