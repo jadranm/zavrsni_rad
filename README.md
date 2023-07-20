@@ -1,1 +1,1 @@
-# diplomski
+# završni
