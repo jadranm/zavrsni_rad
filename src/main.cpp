@@ -6,6 +6,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 
+hw_timer_t *Timer0_Cfg = NULL;
 
 #define LED_INTERNI 2
 
@@ -29,6 +30,23 @@
 
 byte CO2req[] = {0xFE, 0X44, 0X00, 0X08, 0X02, 0X9F, 0X25};
 byte CO2out[] = {0, 0, 0, 0, 0, 0, 0};
+
+int counter= 0;
+int *CO2_p;
+
+void IRAM_ATTR Timer0_ISR(){
+
+	String postData = "co2=" + String(*CO2_p);
+
+  	HTTPClient http; 
+  	http.begin(SERVER_PATH);
+  	http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  
+  	int httpCode = http.POST(postData);
+  	String payload = http.getString(); 
+	counter++;
+}
+
 
 void Alarm(){
 	for (int8_t i = 0; i < 3; i++){
@@ -104,7 +122,6 @@ void connectWiFi() {
 }
 
 
-
 void setup(){
 
 	pinMode(LED_INTERNI, OUTPUT);
@@ -112,6 +129,11 @@ void setup(){
 	Serial.begin(115200);
 	Serial1.begin(9600, SERIAL_8N1, S8_RX, S8_TX);
 	//Serial2.begin(9600,SERIAL_8N1, GPS_RX, GPS_TX); //ova linija sjebe sve
+
+	Timer0_Cfg = timerBegin(0, 64000, true);
+    timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
+    timerAlarmWrite(Timer0_Cfg, 37500, true);
+    timerAlarmEnable(Timer0_Cfg);
 
 	//staticka ip nije potrebna
 	//StatickaIP();
@@ -128,6 +150,8 @@ void loop(){
 	delay(2000);
 
 	Serial.println("CO2: " + String(CO2));
+	*CO2_p = CO2;
+	Serial.print(*CO2_p);
 	/*
 	if (GPS.fix){
 		Serial.println(GPS.longitude);
@@ -144,18 +168,15 @@ void loop(){
     	connectWiFi();
   	}
 
-  	String postData = "co2=" + String(CO2);
+	
 
-  	HTTPClient http; 
-  	http.begin(SERVER_PATH);
-  	http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  
-  	int httpCode = http.POST(postData);
-  	String payload = http.getString(); 
-  
+
+	/*
   	Serial.print("URL : "); Serial.println(SERVER_PATH); 
   	Serial.print("Data: "); Serial.println(postData); 
   	Serial.print("httpCode: "); Serial.println(httpCode); 
   	Serial.print("payload : "); Serial.println(payload); 
   	Serial.println("--------------------------------------------------");
+	*/
+	//Serial.println(getCpuFrequencyMhz());
 }
