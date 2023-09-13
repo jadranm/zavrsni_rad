@@ -5,23 +5,30 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <TinyGPSPlus.h>
+#include <HardwareSerial.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 hw_timer_t *Timer0_Cfg = NULL;
 
+#define SERIAL_BRZINA 115200
 #define LED_INTERNI 2
+
+hw_timer_t *Timer0_Cfg = NULL;
 
 #define SSID "lmaoo_xd"
 #define PASSWORD "marinovic"
 #define SERVER_PATH "http://192.168.0.212/co2_projekt/test.php"
 
+
 // pinovi za GPS
-#define GPSSerial Serial2
+HardwareSerial neogps(1);	//uart port 1
+TinyGPSPlus gps;
 #define GPS_RX 16
 #define GPS_TX 17
-
-//Adafruit_GPS GPS(&GPSSerial);
-
-#define GPSECHO false
+float longitude, latitude;
+//sa rx16 tx17 radi
 
 // za CO2 senzor
 // pinovi za S8
@@ -103,32 +110,44 @@ void StatickaIP(){
 	}
 }
 
-void connectWiFi() {
+void SpajanjeNaWIFI() {
 	WiFi.mode(WIFI_OFF);
   	delay(1000);
   	
   	WiFi.mode(WIFI_STA);
   
   	WiFi.begin(SSID, PASSWORD);
-  	Serial.println("Connecting to WiFi");
+  	Serial.println("Spajanje na WiFi");
   
   	while (WiFi.status() != WL_CONNECTED){
     	delay(500);
     	Serial.print(".");
   	}
-    
-  	Serial.print("connected to : "); Serial.println(SSID);
+    Serial.print("Spojeno na: ");
+  	Serial.print("Ime mreže : "); Serial.println(SSID);
   	Serial.print("IP address: "); Serial.println(WiFi.localIP());
 }
 
+bool upis_flag = false;
+
+void IRAM_ATTR Timer0_ISR(){
+	upis_flag = true;
+}
 
 void setup(){
 
 	pinMode(LED_INTERNI, OUTPUT);
 
-	Serial.begin(115200);
+	Serial.begin(SERIAL_BRZINA);
 	Serial1.begin(9600, SERIAL_8N1, S8_RX, S8_TX);
-	//Serial2.begin(9600,SERIAL_8N1, GPS_RX, GPS_TX); //ova linija sjebe sve
+	neogps.begin(9600,SERIAL_8N1, GPS_RX, GPS_TX);
+	
+	//konfigurirano na 30 sekundi
+	Timer0_Cfg = timerBegin(0, 64000, true);
+    timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
+    timerAlarmWrite(Timer0_Cfg, 37500, true);
+    timerAlarmEnable(Timer0_Cfg);
+	
 
 	Timer0_Cfg = timerBegin(0, 64000, true);
     timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
@@ -138,17 +157,35 @@ void setup(){
 	//staticka ip nije potrebna
 	//StatickaIP();
 
-	connectWiFi();
+	//SpajanjeNaWIFI();
 }
 
 
 
 void loop(){
-
+	
 	RequestCO2();
 	unsigned long CO2 = CO2count();
 	delay(2000);
+	
+	//za mysql bazu podataka
+	if(WiFi.status() != WL_CONNECTED) { 
+    	SpajanjeNaWIFI();
+  	}
+	
+	
+	//za tinyGPS
+	boolean newData = false;
+  	for (unsigned long start = millis(); millis() - start < 1000;) {
+		while (neogps.available()) {
+			if (gps.encode(neogps.read())) {
+				newData = true;
+			}
+		}
+  	}
+	
 
+<<<<<<< HEAD
 	Serial.println("CO2: " + String(CO2));
 	*CO2_p = CO2;
 	Serial.print(*CO2_p);
@@ -157,18 +194,39 @@ void loop(){
 		Serial.println(GPS.longitude);
 		Serial.println(GPS.latitude);
 		Serial.println("");
+=======
+	if (gps.location.isValid() == 1) {
+
+			latitude = gps.location.lat();
+			longitude = gps.location.lng();
+
+			//Serial.println(gps.location.lat(), 6);
+			//Serial.println(gps.location.lng(), 6);
+			
+			delay(5000);
+		
+	}else{
+		Serial.println("no fix"); 
+>>>>>>> temp
 	}
-	else{
-		//Serial.println("GPS greska");
+	/*
+	if(newData == true) {   
+    	Serial.println("No Data");
+    	newData = false;
+    	Serial.println(gps.satellites.value());
+  	}
+  	if(newData == false){
+    	Serial.println("No Data");
 	}
 	*/
 
-	//za mysql bazu podataka
-	if(WiFi.status() != WL_CONNECTED) { 
-    	connectWiFi();
-  	}
+	/*
+	Serial.println("test");
+	Serial.println(CO2);
+	*/
 
 	
+<<<<<<< HEAD
 
 
 	/*
@@ -179,4 +237,30 @@ void loop(){
   	Serial.println("--------------------------------------------------");
 	*/
 	//Serial.println(getCpuFrequencyMhz());
+=======
+	if (upis_flag == true && gps.location.isValid()){
+		
+		String postData = "co2=" + String(CO2);
+
+		HTTPClient http; 
+		http.begin(SERVER_PATH);
+		http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+	
+		int httpCode = http.POST(postData);
+		String payload = http.getString(); 
+		
+		Serial.println("CO2: " + String(CO2));
+		Serial.print("geografska duzina: "); Serial.println(latitude, 6);
+		Serial.print("geografska sirina: "); Serial.println(longitude, 6);
+		Serial.print("URL: "); Serial.println(SERVER_PATH); 
+		//Serial.print("Data: "); Serial.println(postData); 
+		Serial.print("httpCode: "); Serial.println(httpCode);
+		Serial.print("payload: "); Serial.println(payload); 
+		Serial.println("--------------------------------------------------");
+
+		upis_flag = false;
+	}
+	
+
+>>>>>>> temp
 }
