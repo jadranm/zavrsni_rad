@@ -16,8 +16,8 @@ hw_timer_t *Timer0_Cfg = NULL;
 
 hw_timer_t *Timer0_Cfg = NULL;
 
-#define SSID "lmaoo_xd"
-#define PASSWORD "marinovic"
+#define SSID ""
+#define PASSWORD ""
 #define SERVER_PATH "http://192.168.0.212/co2_projekt/test.php"
 
 
@@ -197,7 +197,7 @@ void loop(){
 	}else{
 		Serial.println("no fix"); 
 	}
-	/*
+	
 	if(newData == true) {   
     	Serial.println("No Data");
     	newData = false;
@@ -206,25 +206,7 @@ void loop(){
   	if(newData == false){
     	Serial.println("No Data");
 	}
-	*/
 
-	/*
-	Serial.println("test");
-	Serial.println(CO2);
-	*/
-
-	
-
-
-
-	/*
-  	Serial.print("URL : "); Serial.println(SERVER_PATH); 
-  	Serial.print("Data: "); Serial.println(postData); 
-  	Serial.print("httpCode: "); Serial.println(httpCode); 
-  	Serial.print("payload : "); Serial.println(payload); 
-  	Serial.println("--------------------------------------------------");
-	*/
-	//Serial.println(getCpuFrequencyMhz());
 
 	if (upis_flag == true && gps.location.isValid()){
 		
