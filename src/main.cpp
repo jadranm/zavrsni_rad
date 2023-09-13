@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
-#include <Adafruit_GPS.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -149,7 +148,7 @@ void setup(){
     timerAlarmEnable(Timer0_Cfg);
 	
 
-	Timer0_Cfg = timerBegin(0, 64000, true);
+Timer0_Cfg = timerBegin(0, 64000, true);
     timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
     timerAlarmWrite(Timer0_Cfg, 37500, true);
     timerAlarmEnable(Timer0_Cfg);
@@ -185,16 +184,6 @@ void loop(){
   	}
 	
 
-<<<<<<< HEAD
-	Serial.println("CO2: " + String(CO2));
-	*CO2_p = CO2;
-	Serial.print(*CO2_p);
-	/*
-	if (GPS.fix){
-		Serial.println(GPS.longitude);
-		Serial.println(GPS.latitude);
-		Serial.println("");
-=======
 	if (gps.location.isValid() == 1) {
 
 			latitude = gps.location.lat();
@@ -207,7 +196,6 @@ void loop(){
 		
 	}else{
 		Serial.println("no fix"); 
->>>>>>> temp
 	}
 	/*
 	if(newData == true) {   
@@ -226,7 +214,7 @@ void loop(){
 	*/
 
 	
-<<<<<<< HEAD
+
 
 
 	/*
@@ -237,7 +225,7 @@ void loop(){
   	Serial.println("--------------------------------------------------");
 	*/
 	//Serial.println(getCpuFrequencyMhz());
-=======
+
 	if (upis_flag == true && gps.location.isValid()){
 		
 		String postData = "co2=" + String(CO2);
@@ -262,5 +250,4 @@ void loop(){
 	}
 	
 
->>>>>>> temp
 }
