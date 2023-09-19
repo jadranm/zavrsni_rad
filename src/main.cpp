@@ -8,17 +8,15 @@
 #include <HardwareSerial.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <SPI.h>
 
-hw_timer_t *Timer0_Cfg = NULL;
+#include <lozinke.h>
+
 
 #define SERIAL_BRZINA 115200
 #define LED_INTERNI 2
 
 hw_timer_t *Timer0_Cfg = NULL;
-
-#define SSID ""
-#define PASSWORD ""
-#define SERVER_PATH "http://192.168.0.212/co2_projekt/test.php"
 
 
 // pinovi za GPS
@@ -37,21 +35,13 @@ float longitude, latitude;
 byte CO2req[] = {0xFE, 0X44, 0X00, 0X08, 0X02, 0X9F, 0X25};
 byte CO2out[] = {0, 0, 0, 0, 0, 0, 0};
 
-int counter= 0;
-int *CO2_p;
+//za oled
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+#define SCREEN_ADDRESS 0x3C	//0x3D ako ne radi
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-void IRAM_ATTR Timer0_ISR(){
-
-	String postData = "co2=" + String(*CO2_p);
-
-  	HTTPClient http; 
-  	http.begin(SERVER_PATH);
-  	http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  
-  	int httpCode = http.POST(postData);
-  	String payload = http.getString(); 
-	counter++;
-}
 
 
 void Alarm(){
@@ -141,22 +131,29 @@ void setup(){
 	Serial1.begin(9600, SERIAL_8N1, S8_RX, S8_TX);
 	neogps.begin(9600,SERIAL_8N1, GPS_RX, GPS_TX);
 	
+	display.begin(SSD1306_SWITCHCAPVCC,SCREEN_ADDRESS);
+	display.clearDisplay();
+	display.setTextSize(2);
+	display.setTextColor(WHITE);
+	display.setCursor(0,0);
+	display.println("Jadran");
+	display.display();
+
+	delay(1000);
+
 	//konfigurirano na 30 sekundi
 	Timer0_Cfg = timerBegin(0, 64000, true);
     timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
     timerAlarmWrite(Timer0_Cfg, 37500, true);
     timerAlarmEnable(Timer0_Cfg);
 	
-
-Timer0_Cfg = timerBegin(0, 64000, true);
-    timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
-    timerAlarmWrite(Timer0_Cfg, 37500, true);
-    timerAlarmEnable(Timer0_Cfg);
+	if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+    	Serial.println(F("SSD1306 allocation failed"));
 
 	//staticka ip nije potrebna
 	//StatickaIP();
 
-	//SpajanjeNaWIFI();
+	SpajanjeNaWIFI();
 }
 
 
@@ -193,7 +190,9 @@ void loop(){
 			//Serial.println(gps.location.lng(), 6);
 			
 			delay(5000);
+	}
 		
+	/*	
 	}else{
 		Serial.println("no fix"); 
 	}
@@ -206,11 +205,15 @@ void loop(){
   	if(newData == false){
     	Serial.println("No Data");
 	}
+	*/
 
+	if (gps.location.isValid()){
 
-	if (upis_flag == true && gps.location.isValid()){
 		
-		String postData = "co2=" + String(CO2);
+		String postData = 	"latitude=" + String(latitude,6) + 
+							"&longitude=" + String(longitude,6) +
+							"&co2=" + String(CO2);
+		
 
 		HTTPClient http; 
 		http.begin(SERVER_PATH);
@@ -223,13 +226,38 @@ void loop(){
 		Serial.print("geografska duzina: "); Serial.println(latitude, 6);
 		Serial.print("geografska sirina: "); Serial.println(longitude, 6);
 		Serial.print("URL: "); Serial.println(SERVER_PATH); 
-		//Serial.print("Data: "); Serial.println(postData); 
+		Serial.print("Data: "); Serial.println(postData); 
 		Serial.print("httpCode: "); Serial.println(httpCode);
-		Serial.print("payload: "); Serial.println(payload); 
+		Serial.print("payload: "); Serial.println(payload);
 		Serial.println("--------------------------------------------------");
 
 		upis_flag = false;
+
+		display.clearDisplay();
+		display.setTextSize(2);
+		display.setTextColor(WHITE);
+		display.setCursor(0,0);
+		display.println(CO2);
+		display.display();
+
+
+		if (httpCode == 200){ 
+			display.setTextSize(2);
+			display.setTextColor(WHITE);
+			display.setCursor(0,15);
+			display.println("upis je ok");
+			display.display();
+		}else{
+			display.setTextSize(2);
+			display.setTextColor(WHITE);
+			display.setCursor(0,15);
+			display.println("nije upisano");
+			display.display();
+		
+		}
+
+		delay(10000);
+		
 	}
 	
-
 }
