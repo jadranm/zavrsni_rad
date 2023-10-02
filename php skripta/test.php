@@ -24,7 +24,7 @@ if(isset($_POST["latitude"]) && isset($_POST["longitude"]) && isset($_POST["co2"
 	$long = $_POST["longitude"];
 	$co2 = $_POST["co2"];
 
-	//testne vrijednosti
+	//test vrijednosti
 	/*
 	$lat = 33;
 	$long = 666;

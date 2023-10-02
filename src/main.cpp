@@ -10,6 +10,7 @@
 #include <Adafruit_SSD1306.h>
 #include <SPI.h>
 
+#include <pinovi.h>
 #include <lozinke.h>
 
 
@@ -19,21 +20,16 @@
 hw_timer_t *Timer0_Cfg = NULL;
 
 
-// pinovi za GPS
+// za GPS
 HardwareSerial neogps(1);	//uart port 1
 TinyGPSPlus gps;
-#define GPS_RX 16
-#define GPS_TX 17
 float longitude, latitude;
-//sa rx16 tx17 radi
+
 
 // za CO2 senzor
-// pinovi za S8
-#define S8_RX 13
-#define S8_TX 12
-
 byte CO2req[] = {0xFE, 0X44, 0X00, 0X08, 0X02, 0X9F, 0X25};
 byte CO2out[] = {0, 0, 0, 0, 0, 0, 0};
+
 
 //za oled
 #define SCREEN_WIDTH 128
@@ -86,18 +82,7 @@ unsigned long CO2count(){
 	return val * 1;
 }
 
-void StatickaIP(){
-	//staticka ip adresa
-	IPAddress local_IP(192, 168, 1, 184);
-	IPAddress gateway(192, 168, 1, 1);
-	IPAddress subnet(255, 255, 0, 0);
-	IPAddress primaryDNS(8, 8, 8, 8);
-	
-	if (!WiFi.config(local_IP, gateway, subnet, primaryDNS)){
-    	Serial.println("greska u konfiguraciji staticke IP adrese");
-		Alarm();
-	}
-}
+
 
 void SpajanjeNaWIFI() {
 	WiFi.mode(WIFI_OFF);
@@ -136,7 +121,7 @@ void setup(){
 	display.setTextSize(2);
 	display.setTextColor(WHITE);
 	display.setCursor(0,0);
-	display.println("Jadran");
+	display.println("Start");
 	display.display();
 
 	delay(1000);
@@ -150,8 +135,6 @@ void setup(){
 	if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
     	Serial.println(F("SSD1306 allocation failed"));
 
-	//staticka ip nije potrebna
-	//StatickaIP();
 
 	SpajanjeNaWIFI();
 }
@@ -192,22 +175,8 @@ void loop(){
 			delay(5000);
 	}
 		
-	/*	
-	}else{
-		Serial.println("no fix"); 
-	}
-	
-	if(newData == true) {   
-    	Serial.println("No Data");
-    	newData = false;
-    	Serial.println(gps.satellites.value());
-  	}
-  	if(newData == false){
-    	Serial.println("No Data");
-	}
-	*/
 
-	if (gps.location.isValid()){
+	if (gps.location.isValid() && upis_flag == true){
 
 		
 		String postData = 	"latitude=" + String(latitude,6) + 
@@ -231,8 +200,7 @@ void loop(){
 		Serial.print("payload: "); Serial.println(payload);
 		Serial.println("--------------------------------------------------");
 
-		upis_flag = false;
-
+		
 		display.clearDisplay();
 		display.setTextSize(2);
 		display.setTextColor(WHITE);
@@ -257,7 +225,9 @@ void loop(){
 		}
 
 		delay(10000);
-		
+
+		upis_flag = false;
+
 	}
 	
 }
